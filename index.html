@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MathQuest — Taller de Cálculo</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f0e8;
+  --bg2: #ede8de;
+  --bg3: #e8e0d0;
+  --card: #faf7f2;
+  --border: #d8cfc0;
+  --accent: #c0392b;
+  --accent2: #e74c3c;
+  --accent3: #27ae60;
+  --accent4: #d35400;
+  --text: #2c1810;
+  --text2: #6b4f3a;
+  --text3: #a08060;
+  --gold: #b7860b;
+  --radius: 16px;
+  --shadow: 0 4px 16px rgba(80,30,10,0.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+/* BACKGROUNDS */
+.bg-grid { display: none; }
+.bg-glow { display: none; }
+/* LAYOUT */
+#app { position: relative; z-index: 1; }
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+/* HUD */
+#hud {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px;
+  background: rgba(245,240,232,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.hud-brand { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.1rem; color: var(--accent); letter-spacing: -0.5px; }
+.hud-stats { display: flex; gap: 20px; align-items: center; }
+.stat { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; }
+.stat-icon { font-size: 1rem; }
+.stat.xp { color: var(--accent); }
+.stat.lives { color: var(--accent2); }
+.stat.streak { color: var(--accent4); }
+.stat.level { color: var(--gold); }
+.xp-bar-wrap { width: 120px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.xp-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent4)); border-radius: 3px; transition: width 0.5s ease; }
+/* TOAST */
+#toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--card); border: 1px solid var(--border);
+  padding: 14px 28px; border-radius: 50px;
+  font-weight: 600; font-size: 0.9rem;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s;
+  opacity: 0; z-index: 200; white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+#toast.success { border-color: var(--accent3); color: var(--accent3); }
+#toast.error { border-color: var(--accent2); color: var(--accent2); }
+#toast.info { border-color: var(--accent); color: var(--accent); }
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 28px; border-radius: 50px;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.95rem;
+  border: none; cursor: pointer; transition: all 0.2s;
+  text-decoration: none;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(192,57,43,0.3); }
+.btn-success { background: var(--accent3); color: #000; }
+.btn-success:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(39,174,96,0.3); }
+.btn-danger { background: var(--accent2); color: #fff; }
+.btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 8px 18px; font-size: 0.82rem; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+/* CARDS */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px;
+  box-shadow: var(--shadow);
+}
+.card-glow { border-color: var(--accent); border-color: var(--accent); }
+/* ==================== SCREEN: WELCOME ==================== */
+#screen-welcome {
+  justify-content: center; align-items: center; text-align: center;
+  padding: 100px 24px 40px;
+}
+.welcome-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(192,57,43,0.08); border: 1px solid rgba(192,57,43,0.3);
+  color: var(--accent); padding: 6px 16px; border-radius: 50px;
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  margin-bottom: 32px;
+}
+.welcome-title {
+  font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 900; line-height: 1.05; margin-bottom: 20px;
+  background: linear-gradient(135deg, #2c1810 0%, #c0392b 60%, #d35400 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.welcome-sub { color: var(--text2); font-size: 1.1rem; max-width: 520px; margin: 0 auto 48px; line-height: 1.6; }
+.topic-chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 48px; }
+.chip {
+  background: var(--bg3); border: 1px solid var(--border);
+  padding: 8px 16px; border-radius: 50px; font-size: 0.82rem;
+  color: var(--text2); font-weight: 500;
+}
+.chip.highlight { border-color: var(--accent); color: var(--accent); background: rgba(192,57,43,0.06); }
+.welcome-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+/* ==================== SCREEN: MAP ==================== */
+#screen-map { padding-top: 80px; }
+.map-header { text-align: center; padding: 48px 24px 32px; }
+.map-header h2 { font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 8px; }
+.map-header p { color: var(--text2); }
+.map-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px; padding: 0 24px 80px; max-width: 1200px; margin: 0 auto;
+}
+.topic-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; cursor: pointer;
+  transition: all 0.3s; position: relative; overflow: hidden;
+}
+.topic-card::before {
+  content: ''; position: absolute; inset: 0; opacity: 0;
+  transition: opacity 0.3s; border-radius: var(--radius);
+}
+.topic-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+.topic-card.unlocked:hover::before { opacity: 1; }
+.topic-card.locked { opacity: 0.5; cursor: not-allowed; }
+.topic-card.completed { border-color: var(--accent3); }
+.topic-card[data-color="purple"]::before { background: linear-gradient(135deg, rgba(192,57,43,0.04), transparent); }
+.topic-card[data-color="pink"]::before { background: linear-gradient(135deg, rgba(192,57,43,0.04), transparent); }
+.topic-card[data-color="green"]::before { background: linear-gradient(135deg, rgba(39,174,96,0.04), transparent); }
+.topic-card[data-color="orange"]::before { background: linear-gradient(135deg, rgba(211,84,0,0.04), transparent); }
+.topic-card[data-color="blue"]::before { background: linear-gradient(135deg, rgba(56,189,248,0.05), transparent); }
+.topic-card[data-color="red"]::before { background: linear-gradient(135deg, rgba(248,113,113,0.05), transparent); }
+.topic-icon { font-size: 2.2rem; margin-bottom: 14px; display: block; }
+.topic-name { font-weight: 700; font-size: 1.1rem; margin-bottom: 6px; }
+.topic-desc { color: var(--text2); font-size: 0.85rem; line-height: 1.5; margin-bottom: 16px; }
+.topic-progress { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.topic-progress-bar { height: 100%; border-radius: 2px; transition: width 0.5s; }
+[data-color="purple"] .topic-progress-bar { background: var(--accent); }
+[data-color="pink"] .topic-progress-bar { background: var(--accent2); }
+[data-color="green"] .topic-progress-bar { background: var(--accent3); }
+[data-color="orange"] .topic-progress-bar { background: var(--accent4); }
+[data-color="blue"] .topic-progress-bar { background: #38bdf8; }
+[data-color="red"] .topic-progress-bar { background: #f87171; }
+.topic-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.topic-stages { font-size: 0.78rem; color: var(--text3); }
+.lock-icon { color: var(--text3); font-size: 1rem; }
+/* ==================== SCREEN: LESSON ==================== */
+#screen-lesson { padding-top: 72px; }
+.lesson-header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 72px; background: rgba(245,240,232,0.97);
+  backdrop-filter: blur(12px); z-index: 50;
+}
+.back-btn { background: none; border: 1px solid var(--border); color: var(--text2); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+.back-btn:hover { border-color: var(--accent); color: var(--accent); }
+.lesson-title { font-weight: 700; font-size: 1.1rem; }
+.lesson-stage-info { margin-left: auto; font-size: 0.82rem; color: var(--text2); }
+/* Stage tracker */
+.stage-tracker { display: flex; gap: 8px; padding: 20px 24px; overflow-x: auto; }
+.stage-dot {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; border: 2px solid var(--border);
+  flex-shrink: 0; transition: all 0.3s; cursor: pointer; color: var(--text3);
+}
+.stage-dot.done { background: var(--accent3); border-color: var(--accent3); color: #000; }
+.stage-dot.active { border-color: var(--accent); color: var(--accent); background: rgba(192,57,43,0.08); }
+/* Lesson content */
+.lesson-content { max-width: 820px; margin: 0 auto; padding: 32px 24px 120px; }
+/* Theory block */
+.theory-block { margin-bottom: 32px; }
+.theory-block h3 {
+  font-family: 'Playfair Display', serif; font-size: 1.6rem;
+  margin-bottom: 16px; color: var(--text);
+}
+.theory-block h4 { font-size: 1rem; font-weight: 600; color: var(--accent); margin: 20px 0 8px; }
+.theory-block p { color: var(--text2); line-height: 1.75; margin-bottom: 12px; font-size: 0.95rem; }
+.theory-block ul { list-style: none; padding: 0; }
+.theory-block ul li { color: var(--text2); line-height: 1.7; padding-left: 20px; position: relative; margin-bottom: 6px; font-size: 0.95rem; }
+.theory-block ul li::before { content: '▸'; position: absolute; left: 0; color: var(--accent); }
+/* Formula box */
+.formula-box {
+  background: var(--bg3); border-left: 3px solid var(--accent);
+  border-radius: 0 12px 12px 0; padding: 16px 20px; margin: 16px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 1rem;
+  color: var(--text); overflow-x: auto;
+}
+.formula-box.key { border-color: var(--gold); background: rgba(255,215,0,0.05); }
+/* Tip box */
+.tip-box {
+  background: rgba(39,174,96,0.08); border: 1px solid rgba(39,174,96,0.3);
+  border-radius: 12px; padding: 14px 18px; margin: 16px 0;
+  font-size: 0.9rem; color: var(--text2); display: flex; gap: 10px;
+}
+.tip-box::before { content: '💡'; flex-shrink: 0; }
+.warning-box {
+  background: rgba(192,57,43,0.06); border: 1px solid rgba(192,57,43,0.25);
+  border-radius: 12px; padding: 14px 18px; margin: 16px 0;
+  font-size: 0.9rem; color: var(--text2); display: flex; gap: 10px;
+}
+.warning-box::before { content: '⚠️'; flex-shrink: 0; }
+/* Example steps */
+.example-block { background: var(--bg3); border-radius: 12px; padding: 20px; margin: 20px 0; }
+.example-block .ex-title { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent4); font-weight: 700; margin-bottom: 12px; }
+.step { display: flex; gap: 12px; margin-bottom: 10px; font-size: 0.9rem; }
+.step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.step-content { color: var(--text2); line-height: 1.6; flex: 1; }
+.step-content .math { color: var(--text); font-family: 'JetBrains Mono', monospace; }
+/* Decision tree */
+.decision-tree { margin: 20px 0; }
+.dt-row {
+  display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px;
+  background: var(--bg3); border-radius: 10px; padding: 12px 16px;
+  border: 1px solid var(--border); transition: border-color 0.2s;
+}
+.dt-row:hover { border-color: var(--accent); }
+.dt-if { color: var(--accent4); font-weight: 700; font-size: 0.82rem; flex-shrink: 0; margin-top: 2px; }
+.dt-condition { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: var(--text); flex: 1; }
+.dt-arrow { color: var(--accent3); font-weight: 700; margin: 0 4px; }
+.dt-action { color: var(--accent3); font-weight: 600; font-size: 0.88rem; }
+/* ==================== QUESTION PANEL ==================== */
+.question-panel {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px; margin: 20px 0;
+  position: relative; overflow: hidden;
+}
+.question-panel::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent4));
+}
+.q-type { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 700; margin-bottom: 12px; }
+.q-text { font-size: 1.05rem; line-height: 1.65; margin-bottom: 8px; }
+.q-math { font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; color: var(--accent); font-weight: 700; margin: 12px 0; }
+.q-points { font-size: 0.8rem; color: var(--accent4); font-weight: 600; }
+/* Multiple choice */
+.choices { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.choice {
+  background: var(--bg3); border: 2px solid var(--border);
+  border-radius: 10px; padding: 14px 18px; cursor: pointer;
+  transition: all 0.2s; display: flex; align-items: center; gap: 12px;
+  font-size: 0.92rem; color: var(--text2);
+}
+.choice:hover { border-color: var(--accent); color: var(--text); background: rgba(108,99,255,0.06); }
+.choice.selected { border-color: var(--accent); background: rgba(192,57,43,0.08); color: var(--text); }
+.choice.correct { border-color: var(--accent3); background: rgba(39,174,96,0.1); color: var(--accent3); }
+.choice.incorrect { border-color: var(--accent2); background: rgba(192,57,43,0.1); color: var(--accent2); }
+.choice.correct-answer { border-color: var(--accent3); background: rgba(39,174,96,0.08); color: var(--accent3); }
+.choice-letter { width: 28px; height: 28px; border-radius: 6px; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+/* Input question */
+.q-input-wrap { display: flex; gap: 10px; margin-top: 20px; }
+.q-input {
+  flex: 1; background: var(--bg3); border: 2px solid var(--border);
+  border-radius: 10px; padding: 12px 16px; color: var(--text);
+  font-family: 'JetBrains Mono', monospace; font-size: 1rem;
+  transition: border-color 0.2s; outline: none;
+}
+.q-input:focus { border-color: var(--accent); }
+.q-input.correct { border-color: var(--accent3); }
+.q-input.incorrect { border-color: var(--accent2); }
+/* Feedback */
+.feedback-panel {
+  margin-top: 16px; padding: 16px 18px; border-radius: 10px;
+  font-size: 0.92rem; line-height: 1.6; display: none;
+}
+.feedback-panel.show { display: block; }
+.feedback-panel.correct { background: rgba(39,174,96,0.08); border: 1px solid rgba(39,174,96,0.3); }
+.feedback-panel.incorrect { background: rgba(192,57,43,0.08); border: 1px solid rgba(192,57,43,0.3); }
+.feedback-title { font-weight: 700; margin-bottom: 6px; }
+.feedback-panel.correct .feedback-title { color: var(--accent3); }
+.feedback-panel.incorrect .feedback-title { color: var(--accent2); }
+.feedback-panel p { color: var(--text2); }
+/* WHITEBOARD */
+.whiteboard-wrap {
+  display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap;
+}
+.whiteboard-area { flex: 1; min-width: 280px; }
+.whiteboard-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 700; margin-bottom: 8px; }
+#whiteboard-canvas {
+  width: 100%; height: 280px;
+  background: #fff8f0; border: 2px solid var(--border);
+  border-radius: 12px; cursor: crosshair;
+  touch-action: none;
+}
+.wb-tools { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.wb-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text2); padding: 6px 12px; border-radius: 6px;
+  cursor: pointer; font-size: 0.78rem; transition: all 0.2s;
+}
+.wb-btn:hover, .wb-btn.active { border-color: var(--accent); color: var(--accent); }
+.wb-color-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+.wb-color-dot.active { border-color: #fff; transform: scale(1.3); }
+.wb-size { width: 60px; accent-color: var(--accent); }
+/* Scratch keyboard */
+.scratch-keyboard { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.sk-display {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem; color: var(--text); min-height: 44px;
+  margin-bottom: 10px; overflow-x: auto; white-space: nowrap;
+}
+.sk-rows { display: flex; flex-direction: column; gap: 5px; }
+.sk-row { display: flex; gap: 5px; flex-wrap: wrap; }
+.sk-key {
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 10px; border-radius: 6px;
+  cursor: pointer; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem; transition: all 0.15s; min-width: 36px;
+  text-align: center;
+}
+.sk-key:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sk-key.wide { min-width: 60px; }
+/* Next button */
+.lesson-nav { display: flex; justify-content: flex-end; margin-top: 24px; gap: 12px; }
+/* ==================== SCREEN: RESULTS ==================== */
+#screen-results { justify-content: center; align-items: center; padding: 80px 24px 40px; text-align: center; }
+.result-emoji { font-size: 5rem; margin-bottom: 16px; display: block; }
+.result-title { font-family: 'Playfair Display', serif; font-size: 2.2rem; margin-bottom: 12px; }
+.result-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; max-width: 500px; margin: 32px auto; }
+.result-stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 16px; text-align: center; }
+.result-stat-value { font-size: 2rem; font-weight: 700; margin-bottom: 4px; }
+.result-stat-label { font-size: 0.78rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+/* ==================== LEVEL UP ==================== */
+#level-up-modal {
+  position: fixed; inset: 0; z-index: 300; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+}
+#level-up-modal.show { display: flex; }
+.level-up-card {
+  background: var(--card); border: 2px solid var(--gold);
+  border-radius: 24px; padding: 48px; text-align: center;
+  box-shadow: 0 4px 20px rgba(183,134,11,0.25);
+  animation: levelUpAnim 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes levelUpAnim { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.level-up-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); margin-bottom: 12px; }
+.level-up-num { font-family: 'Playfair Display', serif; font-size: 5rem; font-weight: 900; color: var(--gold); line-height: 1; margin-bottom: 8px; }
+/* Confetti */
+.confetti-piece { position: fixed; width: 10px; height: 10px; border-radius: 2px; animation: confettiFall 2s ease-in forwards; pointer-events: none; z-index: 400; }
+@keyframes confettiFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+/* ==================== PROGRESS ==================== */
+.progress-section { padding: 0 24px 40px; max-width: 900px; margin: 0 auto; }
+.progress-section h3 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-bottom: 20px; padding-top: 32px; }
+.achievement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.achievement {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; text-align: center; opacity: 0.4; transition: all 0.3s;
+}
+.achievement.unlocked { opacity: 1; border-color: var(--gold); }
+.achievement-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+.achievement-name { font-size: 0.82rem; font-weight: 600; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+/* Responsive */
+@media(max-width:600px) {
+  .hud-stats { gap: 10px; }
+  .xp-bar-wrap { width: 60px; }
+  .stat span { display: none; }
+  .whiteboard-wrap { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<!-- HUD -->
+<div id="hud" style="display:none">
+  <div class="hud-brand">MathQuest ∑</div>
+  <div class="hud-stats">
+    <div class="stat level">⭐ <span id="hud-level">Nv.1</span></div>
+    <div class="stat xp">
+      <span id="hud-xp">0 XP</span>
+      <div class="xp-bar-wrap"><div class="xp-bar" id="xp-bar" style="width:0%"></div></div>
+    </div>
+    <div class="stat lives">❤️ <span id="hud-lives">3</span></div>
+    <div class="stat streak">🔥 <span id="hud-streak">0</span></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- LEVEL UP MODAL -->
+<div id="level-up-modal">
+  <div class="level-up-card">
+    <div class="level-up-label">🎉 ¡SUBISTE DE NIVEL!</div>
+    <div class="level-up-num" id="level-up-num">2</div>
+    <p style="color:var(--text2); margin-bottom:24px">Sigue así, matemático 🚀</p>
+    <button class="btn btn-primary" onclick="closeLevelUp()">Continuar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+<!-- ====== SCREEN: WELCOME ====== -->
+<div id="screen-welcome" class="screen active">
+  <div class="welcome-badge">🎓 Primer Semestre · Ingeniería Informática</div>
+  <h1 class="welcome-title">Taller de<br>Cálculo & Álgebra</h1>
+  <p class="welcome-sub">Tu asistente de estudio para aprobar el parcial del miércoles. Aprende, practica y gana XP mientras dominas cada tema.</p>
+  <div class="topic-chips">
+    <span class="chip highlight">Álgebra</span>
+    <span class="chip highlight">Funciones</span>
+    <span class="chip highlight">Inequaciones</span>
+    <span class="chip highlight">Valor Absoluto</span>
+    <span class="chip highlight">Límites</span>
+    <span class="chip highlight">Derivadas</span>
+    <span class="chip">Regla del Producto</span>
+    <span class="chip">Regla del Cociente</span>
+    <span class="chip">Funciones Exp/Log</span>
+    <span class="chip">Trigonometría</span>
+  </div>
+  <div class="welcome-actions">
+    <button class="btn btn-primary" onclick="startApp()">🚀 Comenzar Aventura</button>
+    <button class="btn btn-outline" onclick="showMap()">Ver Temas</button>
+  </div>
+  <div style="margin-top:60px; color:var(--text3); font-size:0.82rem">
+    🎙️ Retroalimentación por voz · 📝 Tablero de operaciones · ⭐ Sistema de puntos
+  </div>
+</div>
+
+<!-- ====== SCREEN: MAP ====== -->
+<div id="screen-map" class="screen">
+  <div class="map-header">
+    <h2>Mapa de Aprendizaje</h2>
+    <p style="color:var(--text2)">Completa cada tema para desbloquear el siguiente</p>
+  </div>
+  <div class="map-grid" id="map-grid"></div>
+</div>
+
+<!-- ====== SCREEN: LESSON ====== -->
+<div id="screen-lesson" class="screen">
+  <div class="lesson-header">
+    <button class="back-btn" onclick="showMap()">← Mapa</button>
+    <span class="lesson-title" id="lesson-title">Álgebra</span>
+    <span class="lesson-stage-info" id="lesson-stage-info">Etapa 1 / 4</span>
+  </div>
+  <div class="stage-tracker" id="stage-tracker"></div>
+  <div class="lesson-content" id="lesson-content"></div>
+</div>
+
+<!-- ====== SCREEN: RESULTS ====== -->
+<div id="screen-results" class="screen">
+  <span class="result-emoji" id="result-emoji">🏆</span>
+  <h2 class="result-title" id="result-title">¡Excelente!</h2>
+  <p style="color:var(--text2)" id="result-msg">Completaste el tema</p>
+  <div class="result-stats" id="result-stats"></div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+    <button class="btn btn-primary" onclick="showMap()">Ver Mapa</button>
+    <button class="btn btn-outline" id="btn-retry" onclick="retryLesson()">Reintentar</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<script>
+// ========== STATE ==========
+const state = {
+  xp: 0, level: 1, lives: 3, streak: 0,
+  maxXpPerLevel: 200,
+  completedTopics: new Set(),
+  topicProgress: {},
+  currentTopic: null,
+  currentStage: 0,
+  currentQuestion: null,
+  answered: false,
+  sessionCorrect: 0,
+  sessionWrong: 0,
+  sessionXP: 0,
+  achievements: new Set(),
+};
+
+// ========== VOICE ==========
+function speak(text, type = 'info') {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'es-ES'; u.rate = 1.05; u.pitch = type === 'correct' ? 1.2 : type === 'incorrect' ? 0.85 : 1.0;
+  const voices = window.speechSynthesis.getVoices();
+  const esVoice = voices.find(v => v.lang.startsWith('es'));
+  if (esVoice) u.voice = esVoice;
+  window.speechSynthesis.speak(u);
+}
+window.speechSynthesis && window.speechSynthesis.getVoices();
+
+// ========== TOAST ==========
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3000);
+}
+
+// ========== XP & LEVEL ==========
+function addXP(amount) {
+  state.xp += amount; state.sessionXP += amount;
+  const xpNeeded = state.maxXpPerLevel * state.level;
+  if (state.xp >= xpNeeded) {
+    state.xp -= xpNeeded; state.level++;
+    showLevelUp(state.level);
+  }
+  updateHUD();
+}
+function updateHUD() {
+  const xpNeeded = state.maxXpPerLevel * state.level;
+  document.getElementById('hud-xp').textContent = `${state.xp} XP`;
+  document.getElementById('hud-level').textContent = `Nv.${state.level}`;
+  document.getElementById('hud-lives').textContent = state.lives;
+  document.getElementById('hud-streak').textContent = state.streak;
+  document.getElementById('xp-bar').style.width = `${(state.xp / xpNeeded) * 100}%`;
+}
+function showLevelUp(level) {
+  document.getElementById('level-up-num').textContent = level;
+  document.getElementById('level-up-modal').classList.add('show');
+  spawnConfetti(); speak(`¡Increíble! Subiste al nivel ${level}!`, 'correct');
+}
+function closeLevelUp() { document.getElementById('level-up-modal').classList.remove('show'); }
+
+// ========== CONFETTI ==========
+function spawnConfetti() {
+  const colors = ['#c0392b','#d35400','#b7860b','#27ae60','#2980b9','#6c3483'];
+  for (let i = 0; i < 60; i++) {
+    setTimeout(() => {
+      const c = document.createElement('div'); c.className = 'confetti-piece';
+      c.style.cssText = `left:${Math.random()*100}vw;top:-20px;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${1.5+Math.random()*1.5}s;transform:rotate(${Math.random()*360}deg)`;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }, i * 30);
+  }
+}
+
+// ========== SCREENS ==========
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function startApp() {
+  document.getElementById('hud').style.display = 'flex';
+  speak('¡Bienvenido al Taller de Cálculo! Comencemos.', 'info');
+  showMap();
+}
+function showMap() { showScreen('screen-map'); renderMap(); }
+
+// ========== TOPICS DATA ==========
+const TOPICS = [
+  {
+    id: 'algebra', name: 'Álgebra', icon: '∑', color: 'purple',
+    desc: 'Factorización, productos notables, fracciones algebraicas y más.',
+    stages: ['Teoría', 'Árbol', 'Práctica Básica', 'Práctica Avanzada'],
+    prereq: [],
+  },
+  {
+    id: 'funciones', name: 'Funciones', icon: 'f(x)', color: 'pink',
+    desc: 'Lineales, cuadráticas, exponenciales, radicales y logarítmicas.',
+    stages: ['Teoría', 'Árbol', 'Práctica Básica', 'Práctica Avanzada'],
+    prereq: ['algebra'],
+  },
+  {
+    id: 'inequaciones', name: 'Inequaciones', icon: '≤', color: 'orange',
+    desc: 'Desigualdades lineales, cuadráticas y con valor absoluto.',
+    stages: ['Teoría', 'Árbol', 'Práctica Básica', 'Práctica Avanzada'],
+    prereq: ['algebra'],
+  },
+  {
+    id: 'valor_absoluto', name: 'Valor Absoluto', icon: '|x|', color: 'blue',
+    desc: 'Ecuaciones e inecuaciones con valor absoluto.',
+    stages: ['Teoría', 'Árbol', 'Práctica Básica', 'Práctica Avanzada'],
+    prereq: ['inequaciones'],
+  },
+  {
+    id: 'limites', name: 'Límites', icon: 'lim', color: 'green',
+    desc: 'Límites directos, indeterminaciones, teoremas y continuidad.',
+    stages: ['Teoría', 'Árbol', 'Práctica Básica', 'Práctica Avanzada'],
+    prereq: ['funciones'],
+  },
+  {
+    id: 'derivadas', name: 'Derivadas', icon: "f'", color: 'red',
+    desc: 'Reglas de derivación, producto, cociente, cadena, exp/log/trig.',
+    stages: ['Teoría', 'Árbol', 'Práctica Básica', 'Práctica Avanzada'],
+    prereq: ['limites'],
+  },
+];
+
+function renderMap() {
+  const grid = document.getElementById('map-grid'); grid.innerHTML = '';
+  TOPICS.forEach(t => {
+    const locked = t.prereq.some(p => !state.completedTopics.has(p));
+    const done = state.completedTopics.has(t.id);
+    const prog = state.topicProgress[t.id] || 0;
+    const card = document.createElement('div');
+    card.className = `topic-card ${locked ? 'locked' : 'unlocked'} ${done ? 'completed' : ''}`;
+    card.dataset.color = t.color;
+    card.innerHTML = `
+      <span class="topic-icon">${t.icon}</span>
+      <div class="topic-name">${t.name} ${done ? '✅' : ''}</div>
+      <div class="topic-desc">${t.desc}</div>
+      <div class="topic-progress"><div class="topic-progress-bar" style="width:${prog}%"></div></div>
+      <div class="topic-meta">
+        <span class="topic-stages">${t.stages.length} etapas</span>
+        ${locked ? '<span class="lock-icon">🔒</span>' : ''}
+      </div>`;
+    if (!locked) card.onclick = () => startLesson(t.id);
+    grid.appendChild(card);
+  });
+}
+
+// ========== LESSON ENGINE ==========
+let currentTopicData, currentStageIdx, currentQuestions, currentQIdx;
+
+function startLesson(topicId) {
+  state.currentTopic = topicId;
+  currentTopicData = TOPICS.find(t => t.id === topicId);
+  currentStageIdx = 0;
+  state.sessionCorrect = 0; state.sessionWrong = 0; state.sessionXP = 0;
+  showScreen('screen-lesson');
+  renderLessonHeader();
+  loadStage(0);
+}
+function renderLessonHeader() {
+  document.getElementById('lesson-title').textContent = currentTopicData.name;
+  const tracker = document.getElementById('stage-tracker'); tracker.innerHTML = '';
+  currentTopicData.stages.forEach((s, i) => {
+    const dot = document.createElement('div');
+    dot.className = `stage-dot ${i < currentStageIdx ? 'done' : i === currentStageIdx ? 'active' : ''}`;
+    dot.textContent = i + 1; dot.title = s;
+    if (i <= currentStageIdx) dot.onclick = () => { currentStageIdx = i; loadStage(i); };
+    tracker.appendChild(dot);
+  });
+  document.getElementById('lesson-stage-info').textContent = `Etapa ${currentStageIdx+1} / ${currentTopicData.stages.length}`;
+}
+function loadStage(idx) {
+  currentStageIdx = idx;
+  renderLessonHeader();
+  const content = document.getElementById('lesson-content');
+  const stageName = currentTopicData.stages[idx];
+  if (stageName === 'Teoría') { content.innerHTML = getTheory(currentTopicData.id); addNextBtn(content); }
+  else if (stageName === 'Árbol') { content.innerHTML = getDecisionTree(currentTopicData.id); addNextBtn(content); }
+  else if (stageName === 'Práctica Básica') { loadQuestions(currentTopicData.id, 'basica'); }
+  else if (stageName === 'Práctica Avanzada') { loadQuestions(currentTopicData.id, 'avanzada'); }
+  updateProgress();
+}
+function addNextBtn(container) {
+  const nav = document.createElement('div'); nav.className = 'lesson-nav';
+  const btn = document.createElement('button'); btn.className = 'btn btn-primary';
+  btn.textContent = 'Siguiente Etapa →';
+  btn.onclick = () => advanceStage();
+  nav.appendChild(btn); container.appendChild(nav);
+}
+function advanceStage() {
+  if (currentStageIdx < currentTopicData.stages.length - 1) {
+    loadStage(currentStageIdx + 1);
+  } else {
+    finishTopic();
+  }
+}
+function updateProgress() {
+  const pct = Math.round(((currentStageIdx) / currentTopicData.stages.length) * 100);
+  state.topicProgress[currentTopicData.id] = pct;
+}
+function finishTopic() {
+  state.completedTopics.add(currentTopicData.id);
+  state.topicProgress[currentTopicData.id] = 100;
+  const accuracy = state.sessionCorrect + state.sessionWrong > 0
+    ? Math.round((state.sessionCorrect / (state.sessionCorrect + state.sessionWrong)) * 100) : 100;
+  const emoji = accuracy >= 80 ? '🏆' : accuracy >= 60 ? '🎯' : '📚';
+  const title = accuracy >= 80 ? '¡Excelente dominio!' : accuracy >= 60 ? '¡Buen trabajo!' : 'Sigue practicando';
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-msg').textContent = `Completaste: ${currentTopicData.name}`;
+  document.getElementById('result-stats').innerHTML = `
+    <div class="result-stat"><div class="result-stat-value" style="color:var(--accent3)">${state.sessionCorrect}</div><div class="result-stat-label">Correctas</div></div>
+    <div class="result-stat"><div class="result-stat-value" style="color:var(--accent2)">${state.sessionWrong}</div><div class="result-stat-label">Incorrectas</div></div>
+    <div class="result-stat"><div class="result-stat-value" style="color:var(--accent)">${state.sessionXP}</div><div class="result-stat-label">XP ganados</div></div>
+    <div class="result-stat"><div class="result-stat-value" style="color:var(--gold)">${accuracy}%</div><div class="result-stat-label">Precisión</div></div>`;
+  speak(`¡Completaste ${currentTopicData.name} con ${accuracy} por ciento de precisión!`, accuracy >= 70 ? 'correct' : 'info');
+  if (accuracy >= 80) spawnConfetti();
+  showScreen('screen-results');
+}
+function retryLesson() { startLesson(currentTopicData.id); }
+
+// ========== QUESTIONS ENGINE ==========
+function loadQuestions(topicId, level) {
+  const qs = getQuestions(topicId, level);
+  currentQuestions = qs; currentQIdx = 0;
+  renderQuestion();
+}
+function renderQuestion() {
+  if (currentQIdx >= currentQuestions.length) { advanceStage(); return; }
+  const q = currentQuestions[currentQIdx];
+  const content = document.getElementById('lesson-content'); content.innerHTML = '';
+  // Whiteboard + question layout
+  const wrap = document.createElement('div');
+  wrap.innerHTML = buildQuestionHTML(q);
+  content.appendChild(wrap);
+  initWhiteboard();
+  initScratchKeyboard();
+  updateHUD();
+}
+function buildQuestionHTML(q) {
+  const total = currentQuestions.length;
+  const idx = currentQIdx + 1;
+  let choicesHTML = '';
+  if (q.type === 'mc') {
+    choicesHTML = `<div class="choices" id="choices">` +
+      q.choices.map((c, i) =>
+        `<div class="choice" onclick="selectChoice(${i})" data-index="${i}">
+          <span class="choice-letter">${String.fromCharCode(65+i)}</span> ${c}
+        </div>`).join('') + `</div>`;
+  } else {
+    choicesHTML = `<div class="q-input-wrap">
+      <input class="q-input" id="q-input" type="text" placeholder="Escribe tu respuesta..." onkeydown="if(event.key==='Enter')checkInput()">
+      <button class="btn btn-primary btn-sm" onclick="checkInput()">Verificar</button>
+    </div>`;
+  }
+  const progressPct = Math.round(((currentQIdx) / currentQuestions.length) * 100);
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <span style="font-size:0.8rem;color:var(--text3)">${q.level === 'basica' ? '📘 Básico' : '📕 Avanzado'} · ${idx}/${total}</span>
+    <span style="font-size:0.8rem;color:var(--accent4)">+${q.points} XP</span>
+  </div>
+  <div style="height:4px;background:var(--border);border-radius:2px;margin-bottom:24px;overflow:hidden">
+    <div style="height:100%;width:${progressPct}%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width 0.4s"></div>
+  </div>
+  <div class="whiteboard-wrap">
+    <div style="flex:1.2;min-width:260px">
+      <div class="question-panel" id="q-panel">
+        <div class="q-type">${q.category}</div>
+        <div class="q-text">${q.text}</div>
+        <div class="q-math">${q.math}</div>
+        ${choicesHTML}
+        <div class="feedback-panel" id="feedback"></div>
+      </div>
+    </div>
+    <div class="whiteboard-area">
+      <div class="whiteboard-label">📝 Tablero de operaciones</div>
+      <canvas id="whiteboard-canvas"></canvas>
+      <div class="wb-tools">
+        <button class="wb-btn active" id="wb-pen" onclick="setWbTool('pen')">✏️ Lápiz</button>
+        <button class="wb-btn" id="wb-erase" onclick="setWbTool('erase')">🧹 Borrar</button>
+        <button class="wb-btn" onclick="clearWb()">🗑️ Limpiar</button>
+        <div style="display:flex;gap:4px;align-items:center;margin-left:4px">
+          ${['#2c1810','#c0392b','#27ae60','#d35400','#b7860b','#2980b9'].map(c =>
+            `<div class="wb-color-dot ${c==='#2c1810'?'active':''}" style="background:${c}" onclick="setWbColor('${c}',this)"></div>`).join('')}
+        </div>
+        <input type="range" class="wb-size" min="1" max="20" value="3" id="wb-size" oninput="setWbSize(this.value)">
+      </div>
+      <div class="scratch-keyboard" style="margin-top:10px">
+        <div class="whiteboard-label">⌨️ Calculadora matemática</div>
+        <div class="sk-display" id="sk-display">_</div>
+        <div class="sk-rows" id="sk-rows"></div>
+      </div>
+    </div>
+  </div>
+  <div class="lesson-nav" id="q-nav" style="display:none">
+    <button class="btn btn-outline btn-sm" onclick="skipQuestion()">Saltar</button>
+    <button class="btn btn-primary" onclick="nextQuestion()">Siguiente →</button>
+  </div>`;
+}
+
+// ========== CHOICE HANDLER ==========
+function selectChoice(idx) {
+  if (state.answered) return;
+  state.answered = true;
+  const q = currentQuestions[currentQIdx];
+  const choices = document.querySelectorAll('.choice');
+  choices[idx].classList.add(idx === q.correct ? 'correct' : 'incorrect');
+  if (idx !== q.correct) choices[q.correct].classList.add('correct-answer');
+  showFeedback(idx === q.correct, q);
+}
+function checkInput() {
+  if (state.answered) return;
+  state.answered = true;
+  const q = currentQuestions[currentQIdx];
+  const input = document.getElementById('q-input');
+  const val = input.value.trim().replace(/\s/g,'');
+  const correct = q.answer.replace(/\s/g,'');
+  const isOk = val.toLowerCase() === correct.toLowerCase();
+  input.classList.add(isOk ? 'correct' : 'incorrect');
+  showFeedback(isOk, q, val);
+}
+function showFeedback(correct, q, userVal) {
+  const fb = document.getElementById('feedback');
+  fb.className = `feedback-panel show ${correct ? 'correct' : 'incorrect'}`;
+  fb.innerHTML = correct
+    ? `<div class="feedback-title">✅ ¡Correcto!</div><p>${q.explanation}</p>`
+    : `<div class="feedback-title">❌ Incorrecto</div><p><strong>Respuesta correcta:</strong> ${q.answer}</p><p>${q.explanation}</p>`;
+  document.getElementById('q-nav').style.display = 'flex';
+  if (correct) {
+    state.sessionCorrect++; state.streak++;
+    const bonus = state.streak >= 5 ? 2 : state.streak >= 3 ? 1.5 : 1;
+    const earned = Math.round(q.points * bonus);
+    addXP(earned);
+    speak(getCorrectPhrase(), 'correct');
+    showToast(`+${earned} XP ${state.streak >= 3 ? '🔥 ×'+bonus+' combo!' : ''}`, 'success');
+  } else {
+    state.sessionWrong++; state.streak = 0;
+    state.lives = Math.max(0, state.lives - 1);
+    updateHUD();
+    speak(getWrongPhrase(), 'incorrect');
+    showToast('Sigue intentando 💪', 'error');
+  }
+  updateHUD();
+}
+const correctPhrases = ['¡Excelente!','¡Muy bien!','¡Correcto, brillante!','¡Perfecto!','¡Genial!','¡Lo lograste!'];
+const wrongPhrases = ['No es correcto, revisa la explicación','Inténtalo de nuevo la próxima vez','Casi, revisa el método','Sigue practicando, lo lograrás'];
+const getCorrectPhrase = () => correctPhrases[Math.floor(Math.random()*correctPhrases.length)];
+const getWrongPhrase = () => wrongPhrases[Math.floor(Math.random()*wrongPhrases.length)];
+
+function nextQuestion() { state.answered = false; currentQIdx++; renderQuestion(); }
+function skipQuestion() { state.answered = false; currentQIdx++; renderQuestion(); }
+
+// ========== WHITEBOARD ==========
+let wbCtx, wbTool = 'pen', wbColor = '#2c1810', wbSize = 3, wbDrawing = false, wbLast = null;
+function initWhiteboard() {
+  const canvas = document.getElementById('whiteboard-canvas');
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+  wbCtx = canvas.getContext('2d');
+  wbCtx.fillStyle = '#fff8f0'; wbCtx.fillRect(0, 0, canvas.width, canvas.height);
+  wbCtx.lineCap = 'round'; wbCtx.lineJoin = 'round';
+  const getPos = e => {
+    const r = canvas.getBoundingClientRect();
+    if (e.touches) return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  canvas.onmousedown = canvas.ontouchstart = e => { e.preventDefault(); wbDrawing = true; wbLast = getPos(e); };
+  canvas.onmousemove = canvas.ontouchmove = e => {
+    e.preventDefault();
+    if (!wbDrawing) return;
+    const pos = getPos(e);
+    wbCtx.beginPath(); wbCtx.moveTo(wbLast.x, wbLast.y); wbCtx.lineTo(pos.x, pos.y);
+    if (wbTool === 'erase') { wbCtx.globalCompositeOperation = 'destination-out'; wbCtx.lineWidth = wbSize * 5; }
+    else { wbCtx.globalCompositeOperation = 'source-over'; wbCtx.strokeStyle = wbColor; wbCtx.lineWidth = wbSize; }
+    wbCtx.stroke(); wbLast = pos;
+  };
+  canvas.onmouseup = canvas.onmouseleave = canvas.ontouchend = () => wbDrawing = false;
+  window.addEventListener('resize', () => { if (canvas) { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; wbCtx.fillStyle = '#fff8f0'; wbCtx.fillRect(0,0,canvas.width,canvas.height); }});
+}
+function setWbTool(t) {
+  wbTool = t;
+  document.getElementById('wb-pen').classList.toggle('active', t==='pen');
+  document.getElementById('wb-erase').classList.toggle('active', t==='erase');
+}
+function setWbColor(c, el) {
+  wbColor = c; wbTool = 'pen';
+  document.querySelectorAll('.wb-color-dot').forEach(d => d.classList.remove('active'));
+  el.classList.add('active');
+}
+function setWbSize(v) { wbSize = parseInt(v); }
+function clearWb() {
+  const c = document.getElementById('whiteboard-canvas');
+  if (c) { wbCtx.fillStyle = '#fff8f0'; wbCtx.fillRect(0,0,c.width,c.height); }
+}
+
+// ========== SCRATCH KEYBOARD ==========
+let skValue = '';
+const skRows = [
+  ['7','8','9','÷','x²','√'],
+  ['4','5','6','×','xⁿ','('],
+  ['1','2','3','-','log',')',],
+  ['0','.','=','+','sin','cos'],
+  ['tan','ln','π','e','⌫','C'],
+];
+function initScratchKeyboard() {
+  const rows = document.getElementById('sk-rows'); if (!rows) return;
+  rows.innerHTML = '';
+  skRows.forEach(row => {
+    const rowEl = document.createElement('div'); rowEl.className = 'sk-row';
+    row.forEach(k => {
+      const btn = document.createElement('button'); btn.className = 'sk-key'; btn.textContent = k;
+      btn.onclick = () => handleSK(k);
+      rowEl.appendChild(btn);
+    });
+    rows.appendChild(rowEl);
+  });
+  skValue = ''; updateSKDisplay();
+}
+function handleSK(k) {
+  if (k === 'C') { skValue = ''; }
+  else if (k === '⌫') { skValue = skValue.slice(0,-1); }
+  else if (k === '=') { try { const e = skValue.replace(/÷/g,'/').replace(/×/g,'*').replace(/π/g,'Math.PI').replace(/√(\d+)/g,'Math.sqrt($1)').replace(/log/g,'Math.log10').replace(/ln/g,'Math.log').replace(/sin/g,'Math.sin').replace(/cos/g,'Math.cos').replace(/tan/g,'Math.tan').replace(/e/g,'Math.E'); skValue += ' = ' + eval(e); } catch(e) { skValue += ' = Error'; } }
+  else { skValue += k; }
+  updateSKDisplay();
+}
+function updateSKDisplay() {
+  const d = document.getElementById('sk-display'); if (d) d.textContent = skValue || '_';
+}
+
+// ========= THEORY CONTENT ==========
+function getTheory(topicId) {
+  const theories = {
+    algebra: `
+<div class="theory-block">
+<h3>Álgebra Universitaria</h3>
+<p>El álgebra es el lenguaje de las matemáticas. Antes de derivar o calcular límites, debes dominar las operaciones algebraicas como un músico domina las escalas.</p>
+<h4>1. Factorización — El arma más importante</h4>
+<p>Factorizar significa escribir una expresión como un producto de factores más simples. Esta habilidad aparece en <em>todos</em> los temas del examen.</p>
+<div class="formula-box key">Factor común: ax + ay = a(x + y)</div>
+<div class="formula-box">Diferencia de cuadrados: a² - b² = (a+b)(a-b)</div>
+<div class="formula-box">Trinomio cuadrado perfecto: a² + 2ab + b² = (a+b)²</div>
+<div class="formula-box">Trinomio cuadrado perfecto: a² - 2ab + b² = (a-b)²</div>
+<div class="formula-box">Suma/diferencia de cubos: a³ ± b³ = (a ± b)(a² ∓ ab + b²)</div>
+<div class="tip-box">Para factorizar x² + bx + c, busca dos números que sumados den b y multiplicados den c.</div>
+<h4>2. Productos Notables — Memorización obligatoria</h4>
+<div class="formula-box">(a + b)² = a² + 2ab + b²</div>
+<div class="formula-box">(a - b)² = a² - 2ab + b²</div>
+<div class="formula-box">(a + b)(a - b) = a² - b²</div>
+<div class="formula-box">(a + b)³ = a³ + 3a²b + 3ab² + b³</div>
+<h4>3. Fracciones Algebraicas</h4>
+<p>Para sumar fracciones algebraicas: busca el mínimo común denominador (MCD), convierte y suma los numeradores.</p>
+<div class="formula-box">a/b + c/d = (ad + bc) / bd</div>
+<div class="warning-box">Error clásico: (a+b)/c ≠ a/c + b/c cuando hay suma en el denominador. Solo se puede separar suma en el NUMERADOR.</div>
+<h4>4. Racionalización</h4>
+<p>Útil cuando aparecen raíces en denominadores. Se multiplica por el conjugado.</p>
+<div class="formula-box">1/(√a + √b) × (√a - √b)/(√a - √b) = (√a - √b)/(a - b)</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo resuelto — Factorizar x² - 5x + 6</div>
+<div class="step"><span class="step-num">1</span><span class="step-content">Busco dos números que sumen -5 y multipliquen 6: son -2 y -3</span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content"><span class="math">x² - 5x + 6 = (x - 2)(x - 3)</span></span></div>
+<div class="step"><span class="step-num">3</span><span class="step-content">Verifico: (x-2)(x-3) = x²-3x-2x+6 = x²-5x+6 ✓</span></div>
+</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo resuelto — Simplificar (x²-4)/(x-2)</div>
+<div class="step"><span class="step-num">1</span><span class="step-content">Factorizo el numerador: x²-4 = (x+2)(x-2)</span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content"><span class="math">(x+2)(x-2)/(x-2) = x+2</span>  (cancelando, con x ≠ 2)</span></div>
+</div>
+</div>`,
+
+    funciones: `
+<div class="theory-block">
+<h3>Funciones</h3>
+<p>Una función es una regla que asigna a cada valor de entrada (x) exactamente un valor de salida f(x). Son el objeto de estudio central del cálculo.</p>
+<h4>Función Lineal</h4>
+<div class="formula-box key">f(x) = mx + b  |  m = pendiente, b = intercepto y</div>
+<p>La pendiente m mide cuánto sube f(x) por cada unidad que avanza x. Si m > 0 crece, m < 0 decrece, m = 0 es horizontal.</p>
+<h4>Función Cuadrática</h4>
+<div class="formula-box">f(x) = ax² + bx + c  |  vértice en x = -b/(2a)</div>
+<div class="tip-box">Si a > 0 la parábola abre hacia arriba (mínimo). Si a < 0 abre hacia abajo (máximo).</div>
+<h4>Función Exponencial</h4>
+<div class="formula-box key">f(x) = aˣ  donde a > 0, a ≠ 1</div>
+<p>Dominio: todos los reales. Rango: (0, +∞). Siempre positiva. Pasa por (0, 1). Si a > 1 crece rápido; si 0 < a < 1 decrece.</p>
+<div class="formula-box">f(x) = eˣ  (la más importante en cálculo)</div>
+<h4>Función Logarítmica</h4>
+<div class="formula-box key">f(x) = logₐ(x)  es la inversa de aˣ</div>
+<div class="formula-box">ln(x) = logₑ(x)  |  log(x) = log₁₀(x)</div>
+<p>Dominio: x > 0. Rango: todos los reales. Pasa por (1, 0).</p>
+<h4>Propiedades fundamentales de logaritmos</h4>
+<div class="formula-box">ln(ab) = ln(a) + ln(b)
+ln(a/b) = ln(a) - ln(b)
+ln(aⁿ) = n·ln(a)
+ln(eˣ) = x  |  e^(ln x) = x</div>
+<h4>Función Radical</h4>
+<div class="formula-box">f(x) = √x = x^(1/2)  |  Dominio: x ≥ 0</div>
+<div class="warning-box">La raíz cuadrada de un número negativo NO existe en los reales. Verifica siempre el dominio.</div>
+<h4>Composición de funciones</h4>
+<div class="formula-box">(f ∘ g)(x) = f(g(x))</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo — Si f(x) = x² y g(x) = x+1, hallar (f∘g)(x)</div>
+<div class="step"><span class="step-num">1</span><span class="step-content"><span class="math">(f∘g)(x) = f(g(x)) = f(x+1)</span></span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content"><span class="math">= (x+1)² = x² + 2x + 1</span></span></div>
+</div>
+</div>`,
+
+    inequaciones: `
+<div class="theory-block">
+<h3>Inequaciones</h3>
+<p>Una inequación es una desigualdad algebraica. La solución es siempre un intervalo o unión de intervalos, no un valor puntual.</p>
+<h4>Regla fundamental del cambio de signo</h4>
+<div class="formula-box key">Al multiplicar o dividir por un número NEGATIVO, el signo de la desigualdad se INVIERTE</div>
+<div class="warning-box">Este es el error más común: olvidar invertir el signo. Si -2x > 4, dividir por -2 da x < -2.</div>
+<h4>Inequaciones lineales</h4>
+<p>Se resuelven como ecuaciones, con cuidado del cambio de signo. La solución se expresa como intervalo.</p>
+<div class="example-block">
+<div class="ex-title">Ejemplo — Resolver 3x - 7 > 2x + 1</div>
+<div class="step"><span class="step-num">1</span><span class="step-content"><span class="math">3x - 2x > 1 + 7  →  x > 8</span></span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content">Solución: (8, +∞)</span></div>
+</div>
+<h4>Inequaciones cuadráticas</h4>
+<p>Método: lleva todo a un lado, factoriza, identifica raíces y analiza el signo en cada intervalo.</p>
+<div class="formula-box">Pasos: 1) Todo a un lado  2) Factorizar  3) Tabla de signos  4) Respuesta</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo — Resolver x² - x - 6 > 0</div>
+<div class="step"><span class="step-num">1</span><span class="step-content">Factorizo: <span class="math">(x-3)(x+2) > 0</span></span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content">Raíces: x = 3 y x = -2</span></div>
+<div class="step"><span class="step-num">3</span><span class="step-content">Tabla de signos: en (-∞,-2): (+)(-)= neg; en (-2,3): (-)(+)= neg; en (3,+∞): (+)(+)= pos</span></div>
+<div class="step"><span class="step-num">4</span><span class="step-content">El producto > 0 en: <span class="math">(-∞,-2) ∪ (3,+∞)</span></span></div>
+</div>
+<h4>Notación de intervalos</h4>
+<div class="formula-box">( ) = extremo excluido  |  [ ] = extremo incluido
+(a,b): a < x < b  |  [a,b]: a ≤ x ≤ b</div>
+</div>`,
+
+    valor_absoluto: `
+<div class="theory-block">
+<h3>Valor Absoluto</h3>
+<p>El valor absoluto |x| mide la distancia de x al origen. Siempre es ≥ 0. Entenderlo geométricamente ayuda enormemente.</p>
+<div class="formula-box key">|x| = x  si x ≥ 0  |  |x| = -x  si x < 0</div>
+<h4>Ecuaciones con valor absoluto</h4>
+<div class="formula-box">|expr| = k  →  expr = k  o  expr = -k  (si k ≥ 0)</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo — |2x - 3| = 7</div>
+<div class="step"><span class="step-num">1</span><span class="step-content">Caso 1: 2x - 3 = 7  →  x = 5</span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content">Caso 2: 2x - 3 = -7  →  x = -2</span></div>
+<div class="step"><span class="step-num">3</span><span class="step-content">Solución: x = 5 o x = -2</span></div>
+</div>
+<h4>Inecuaciones con valor absoluto</h4>
+<div class="formula-box key">|x| < k  →  -k < x < k  (intersección)
+|x| > k  →  x < -k  o  x > k  (unión)</div>
+<div class="tip-box">Regla mnemotécnica: "menor que" = AND (las dos condiciones juntas). "mayor que" = OR (una u otra).</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo — |x - 2| ≤ 5</div>
+<div class="step"><span class="step-num">1</span><span class="step-content"><span class="math">-5 ≤ x - 2 ≤ 5</span></span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content"><span class="math">-3 ≤ x ≤ 7</span>  →  Solución: [-3, 7]</span></div>
+</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo — |x + 1| > 3</div>
+<div class="step"><span class="step-num">1</span><span class="step-content">x + 1 > 3  →  x > 2</span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content">x + 1 < -3  →  x < -4</span></div>
+<div class="step"><span class="step-num">3</span><span class="step-content">Solución: <span class="math">(-∞,-4) ∪ (2,+∞)</span></span></div>
+</div>
+<div class="warning-box">Si |expr| = k con k < 0, no hay solución (el valor absoluto nunca es negativo).</div>
+</div>`,
+
+    limites: `
+<div class="theory-block">
+<h3>Límites</h3>
+<p>El límite describe el comportamiento de una función cuando x se acerca a cierto valor, aunque no necesariamente llegue ahí. Es el fundamento del cálculo diferencial e integral.</p>
+<div class="formula-box key">lim[x→a] f(x) = L significa que f(x) se acerca a L cuando x se acerca a a</div>
+<h4>Propiedades de los límites</h4>
+<div class="formula-box">lim[x→a] [f(x) ± g(x)] = lim f(x) ± lim g(x)
+lim[x→a] [f(x)·g(x)] = lim f(x) · lim g(x)
+lim[x→a] [f(x)/g(x)] = lim f(x) / lim g(x)  (si lim g ≠ 0)
+lim[x→a] [f(x)]ⁿ = [lim f(x)]ⁿ</div>
+<h4>Indeterminaciones y su resolución</h4>
+<div class="formula-box key">Formas: 0/0, ∞/∞, 0·∞, ∞-∞, 1^∞, 0⁰, ∞⁰</div>
+<div class="tip-box">Si obtienes 0/0: intenta factorizar. Si hay raíces: racionaliza. Si el grado superior está arriba: el límite es ±∞.</div>
+<h4>Límites laterales</h4>
+<div class="formula-box">lim[x→a⁺] f(x) = límite por la derecha
+lim[x→a⁻] f(x) = límite por la izquierda
+El límite existe solo si ambos laterales son iguales</div>
+<h4>Límites al infinito</h4>
+<p>Para fracciones de polinomios: divide todo por la potencia más alta del denominador.</p>
+<div class="formula-box">lim[x→∞] (3x²+2x)/(x²-1) = 3/1 = 3</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo — lim[x→3] (x²-9)/(x-3)</div>
+<div class="step"><span class="step-num">1</span><span class="step-content">Sustitución directa: (9-9)/(3-3) = 0/0 → indeterminación</span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content">Factorizo: <span class="math">(x-3)(x+3)/(x-3)</span></span></div>
+<div class="step"><span class="step-num">3</span><span class="step-content">Cancelo (x-3): <span class="math">x + 3</span></span></div>
+<div class="step"><span class="step-num">4</span><span class="step-content">lim[x→3] (x+3) = <span class="math">6</span></span></div>
+</div>
+<h4>Límite notable</h4>
+<div class="formula-box key">lim[x→0] sin(x)/x = 1  (fundamental en trigonometría)</div>
+<div class="formula-box">lim[x→0] (eˣ - 1)/x = 1  |  lim[x→∞] (1 + 1/n)ⁿ = e</div>
+</div>`,
+
+    derivadas: `
+<div class="theory-block">
+<h3>Derivadas</h3>
+<p>La derivada mide la tasa de cambio instantánea de una función. Geométricamente, es la pendiente de la recta tangente.</p>
+<div class="formula-box key">f'(x) = lim[h→0] [f(x+h) - f(x)] / h</div>
+<h4>Reglas básicas</h4>
+<div class="formula-box">d/dx [c] = 0  (constante)
+d/dx [xⁿ] = n·xⁿ⁻¹  (potencia)
+d/dx [cf(x)] = c·f'(x)  (constante × función)
+d/dx [f±g] = f'±g'  (suma/resta)</div>
+<h4>Regla del Producto</h4>
+<div class="formula-box key">d/dx [f·g] = f'·g + f·g'</div>
+<div class="tip-box">Mnemotécnica: "deriva la primera por la segunda, más la primera por la derivada de la segunda"</div>
+<h4>Regla del Cociente</h4>
+<div class="formula-box key">d/dx [f/g] = (f'·g - f·g') / g²</div>
+<div class="warning-box">¡El orden importa! Arriba va f'g - fg', NO fg' - f'g. Y siempre dividido por g².</div>
+<h4>Regla de la Cadena</h4>
+<div class="formula-box key">d/dx [f(g(x))] = f'(g(x)) · g'(x)</div>
+<div class="tip-box">Identifica la función exterior e interior. Deriva de afuera hacia adentro multiplicando.</div>
+<h4>Funciones Exponenciales</h4>
+<div class="formula-box">d/dx [eˣ] = eˣ
+d/dx [aˣ] = aˣ · ln(a)
+d/dx [e^(u)] = e^(u) · u'  (cadena)</div>
+<h4>Funciones Logarítmicas</h4>
+<div class="formula-box">d/dx [ln(x)] = 1/x
+d/dx [log_a(x)] = 1/(x·ln(a))
+d/dx [ln(u)] = u'/u  (cadena)</div>
+<h4>Funciones Trigonométricas</h4>
+<div class="formula-box">d/dx [sin(x)] = cos(x)
+d/dx [cos(x)] = -sin(x)
+d/dx [tan(x)] = sec²(x)
+d/dx [sin(u)] = cos(u)·u'  (cadena)</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo — Derivar f(x) = x²·sin(x)</div>
+<div class="step"><span class="step-num">1</span><span class="step-content">Regla del producto: f = x², g = sin(x)</span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content"><span class="math">f' = 2x, g' = cos(x)</span></span></div>
+<div class="step"><span class="step-num">3</span><span class="step-content"><span class="math">d/dx = 2x·sin(x) + x²·cos(x)</span></span></div>
+</div>
+<div class="example-block">
+<div class="ex-title">Ejemplo — Derivar h(x) = e^(x³)</div>
+<div class="step"><span class="step-num">1</span><span class="step-content">Cadena: exterior = eˣ, interior = x³</span></div>
+<div class="step"><span class="step-num">2</span><span class="step-content"><span class="math">h'(x) = e^(x³) · 3x²</span></span></div>
+</div>
+</div>`,
+  };
+  return theories[topicId] || '<p>Contenido en construcción</p>';
+}
+
+// ========== DECISION TREES ==========
+function getDecisionTree(topicId) {
+  const trees = {
+    algebra: [
+      ['Ves x² + bx + c', 'Factorizar buscando dos números que sumen b y multipliquen c'],
+      ['Ves a² - b²', 'Diferencia de cuadrados: (a+b)(a-b)'],
+      ['Ves a² + 2ab + b²', 'Trinomio cuadrado perfecto: (a+b)²'],
+      ['Ves a³ ± b³', 'Suma/diferencia de cubos: (a±b)(a²∓ab+b²)'],
+      ['Hay un factor común', 'Sacar factor común primero, siempre'],
+      ['Hay √ en denominador', 'Racionalizar multiplicando por conjugado'],
+      ['Hay fracción que simplificar', 'Factorizar numerador y denominador, cancelar factores comunes'],
+    ],
+    funciones: [
+      ['Piden dominio de √f(x)', 'Resolver f(x) ≥ 0 (raíz solo existe con argumento ≥ 0)'],
+      ['Piden dominio de ln(f(x))', 'Resolver f(x) > 0 estrictamente'],
+      ['f tiene forma axⁿ+b', 'Es función lineal o polinómica, dominio = todos los reales'],
+      ['f(g(x)) — composición', 'Reemplazar la x de f por toda la expresión g(x)'],
+      ['Piden f(a)', 'Sustituir x = a directamente y calcular'],
+      ['Función inversa', 'Intercambiar x e y, luego despejar y'],
+    ],
+    inequaciones: [
+      ['Inequación lineal', 'Despejar x, recordar invertir signo si se multiplica/divide por negativo'],
+      ['Inequación cuadrática', 'Factorizar, encontrar raíces, tabla de signos'],
+      ['Todo a un lado = 0', 'Siempre el primer paso en cuadráticas'],
+      ['Grado impar, coeficiente positivo', 'Crece de -∞ a +∞'],
+      ['Producto de factores > 0', 'Ambos positivos O ambos negativos'],
+      ['Producto de factores < 0', 'Uno positivo y el otro negativo'],
+    ],
+    valor_absoluto: [
+      ['|expr| = k con k > 0', 'Dos casos: expr = k y expr = -k'],
+      ['|expr| = k con k < 0', 'Sin solución (V.A. siempre ≥ 0)'],
+      ['|expr| < k', '-k < expr < k (resultado: intersección, intervalo cerrado)'],
+      ['|expr| > k', 'expr > k O expr < -k (resultado: unión)'],
+      ['|expr| ≤ k', '-k ≤ expr ≤ k'],
+      ['|expr| ≥ k', 'expr ≥ k O expr ≤ -k'],
+      ['|expr₁| = |expr₂|', 'Dos casos: expr₁ = expr₂ y expr₁ = -expr₂'],
+    ],
+    limites: [
+      ['Sustitución directa posible', 'Sustituir x = a directamente'],
+      ['Resultado es 0/0', 'Factorizar y cancelar, o racionalizar'],
+      ['Hay raíces en la expresión', 'Racionalizar multiplicando por conjugado'],
+      ['Resultado es ±∞/±∞', 'Dividir por la potencia más alta del denominador'],
+      ['x → ±∞ con polinomios', 'Solo importa el término de mayor grado'],
+      ['Aparece sen(x)/x con x→0', 'Límite es 1 (límite notable fundamental)'],
+      ['Límite de ambos lados difiere', 'El límite no existe en ese punto'],
+      ['Función exponencial e^f(x)', 'lim e^f(x) = e^(lim f(x))'],
+    ],
+    derivadas: [
+      ['Solo potencias xⁿ', 'Regla de la potencia: n·xⁿ⁻¹'],
+      ['Producto de dos funciones', 'Regla del producto: f\'g + fg\''],
+      ['Cociente de dos funciones', 'Regla del cociente: (f\'g - fg\') / g²'],
+      ['Función dentro de función', 'Regla de la cadena: f\'(g(x))·g\'(x)'],
+      ['Aparece eˣ o e^u', 'd/dx[eˣ]=eˣ; d/dx[e^u]=e^u·u\''],
+      ['Aparece ln(x) o ln(u)', 'd/dx[ln(x)]=1/x; d/dx[ln(u)]=u\'/u'],
+      ['Aparece sin o cos', 'sin\'=cos, cos\'=-sin, tan\'=sec²'],
+      ['Constante multiplicando', 'La constante "sale": d/dx[c·f]=c·f\''],
+      ['Suma o resta de funciones', 'Se deriva término a término'],
+    ],
+  };
+  const rows = (trees[topicId] || []).map(([cond, action]) =>
+    `<div class="dt-row"><span class="dt-if">SI</span><span class="dt-condition">${cond}</span><span class="dt-arrow">→</span><span class="dt-action">${action}</span></div>`
+  ).join('');
+  return `
+<div class="theory-block">
+<h3>🗺️ Árbol de Decisiones — ${TOPICS.find(t=>t.id===topicId).name}</h3>
+<p style="color:var(--text2);margin-bottom:20px">Usa esta guía en el examen: identifica el patrón y aplica la técnica correspondiente.</p>
+<div class="decision-tree">${rows}</div>
+</div>`;
+}
+
+// ========== QUESTIONS DATA ==========
+function getQuestions(topicId, level) {
+  const all = {
+    algebra: {
+      basica: [
+        { text: 'Factoriza completamente:', math: 'x² + 7x + 12', type: 'mc', choices: ['(x+3)(x+4)','(x+6)(x+2)','(x+12)(x+1)','(x-3)(x-4)'], correct: 0, answer: '(x+3)(x+4)', points: 20, category: 'Factorización', explanation: 'Busca dos números que sumen 7 y multipliquen 12: son 3 y 4. Por lo tanto (x+3)(x+4).' },
+        { text: 'Expande usando producto notable:', math: '(x + 5)²', type: 'mc', choices: ['x² + 25','x² + 5x + 25','x² + 10x + 25','x² + 10x - 25'], correct: 2, answer: 'x²+10x+25', points: 20, category: 'Productos notables', explanation: '(a+b)² = a² + 2ab + b². Aquí a=x, b=5: x² + 2(x)(5) + 25 = x² + 10x + 25.' },
+        { text: 'Simplifica la fracción algebraica:', math: '(x²-9)/(x-3)', type: 'mc', choices: ['x+3','x-3','x+9','x²-3'], correct: 0, answer: 'x+3', points: 25, category: 'Fracciones', explanation: 'El numerador es diferencia de cuadrados: (x+3)(x-3). Cancelando (x-3) queda x+3.' },
+        { text: 'Factoriza:', math: 'x² - 16', type: 'mc', choices: ['(x-4)²','(x+4)(x-4)','(x-8)(x+2)','(x+16)(x-1)'], correct: 1, answer: '(x+4)(x-4)', points: 20, category: 'Diferencia de cuadrados', explanation: 'a²-b² = (a+b)(a-b). Aquí a=x, b=4: (x+4)(x-4).' },
+        { text: '¿Cuál es el factor común de la expresión?', math: '6x³ - 9x²', type: 'mc', choices: ['3x','6x²','3x²','9x'], correct: 2, answer: '3x²', points: 20, category: 'Factor común', explanation: 'El MCD de 6 y 9 es 3, y la menor potencia de x es x². Factorizando: 3x²(2x - 3).' },
+      ],
+      avanzada: [
+        { text: 'Simplifica completamente:', math: '(x³-8)/(x²-4)', type: 'mc', choices: ['(x²+2x+4)/(x+2)','(x-2)/(x+2)','x+2','(x²-2x+4)/(x-2)'], correct: 0, answer: '(x²+2x+4)/(x+2)', points: 40, category: 'Factorización avanzada', explanation: 'Numerador: diferencia de cubos x³-8 = (x-2)(x²+2x+4). Denominador: x²-4 = (x+2)(x-2). Cancelando (x-2): resultado (x²+2x+4)/(x+2).' },
+        { text: 'Expande y simplifica:', math: '(2x-3)² - (x+1)(x-1)', type: 'mc', choices: ['3x²-12x+8','3x²-12x+10','x²-12x+10','3x²+12x+8'], correct: 1, answer: '3x²-12x+10', points: 40, category: 'Combinado', explanation: '(2x-3)²=4x²-12x+9. (x+1)(x-1)=x²-1. Resta: 4x²-12x+9-(x²-1)=3x²-12x+10.' },
+        { text: 'Racionaliza el denominador:', math: '1/(√5 - √3)', type: 'mc', choices: ['(√5+√3)/2','(√5-√3)/2','(√5+√3)/8','(√5-√3)/8'], correct: 0, answer: '(√5+√3)/2', points: 45, category: 'Racionalización', explanation: 'Multiplica por (√5+√3)/(√5+√3). El denominador queda (√5)²-(√3)²=5-3=2. Resultado: (√5+√3)/2.' },
+        { text: 'Factoriza completamente:', math: '2x³ - 6x² - 8x', type: 'mc', choices: ['2x(x-4)(x+1)','2x(x+4)(x-1)','x(x-4)(2x+1)','2(x³-3x²-4x)'], correct: 0, answer: '2x(x-4)(x+1)', points: 40, category: 'Factorización cúbica', explanation: 'Primero factor común: 2x(x²-3x-4). Luego factorizo el trinomio: busco dos números que sumen -3 y multipliquen -4: son -4 y 1. Resultado: 2x(x-4)(x+1).' },
+        { text: 'Simplifica:', math: '(x²+x-6)/(x²-x-2)', type: 'mc', choices: ['(x+3)/(x+1)','(x-2)/(x+1)','(x+3)/(x-2)','(x-3)/(x+1)'], correct: 0, answer: '(x+3)/(x+1)', points: 45, category: 'Fracciones complejas', explanation: 'Numerador: (x+3)(x-2). Denominador: (x-2)(x+1). Cancelando (x-2): (x+3)/(x+1).' },
+      ],
+    },
+    funciones: {
+      basica: [
+        { text: 'Si f(x) = 3x - 5, ¿cuánto es f(2)?', math: 'f(2) = ?', type: 'mc', choices: ['1','11','6','-1'], correct: 0, answer: '1', points: 20, category: 'Evaluación', explanation: 'f(2) = 3(2) - 5 = 6 - 5 = 1.' },
+        { text: '¿Cuál es el dominio de la función?', math: 'f(x) = √(x - 4)', type: 'mc', choices: ['x > 4','x ≥ 4','x ≤ 4','Todos los reales'], correct: 1, answer: 'x ≥ 4', points: 25, category: 'Dominio', explanation: 'La raíz cuadrada requiere que el argumento sea ≥ 0. Entonces x-4 ≥ 0, es decir x ≥ 4.' },
+        { text: 'Si f(x) = x² y g(x) = 2x+1, ¿cuánto es (f∘g)(1)?', math: '(f∘g)(1) = f(g(1)) = ?', type: 'mc', choices: ['9','5','3','4'], correct: 0, answer: '9', points: 30, category: 'Composición', explanation: 'Primero g(1) = 2(1)+1 = 3. Luego f(3) = 3² = 9.' },
+        { text: 'La función f(x) = 2ˣ es:', math: '', type: 'mc', choices: ['Exponencial creciente','Exponencial decreciente','Logarítmica','Lineal'], correct: 0, answer: 'Exponencial creciente', points: 20, category: 'Clasificación', explanation: 'f(x) = aˣ con a=2 > 1 es una función exponencial creciente. Dominio: todos los reales. Rango: (0, +∞).' },
+        { text: '¿Cuál es el dominio de la función?', math: 'f(x) = ln(x + 3)', type: 'mc', choices: ['x > -3','x ≥ -3','x > 3','x ≠ -3'], correct: 0, answer: 'x > -3', points: 25, category: 'Dominio logarítmico', explanation: 'El logaritmo requiere argumento > 0 estrictamente. x+3 > 0 → x > -3.' },
+      ],
+      avanzada: [
+        { text: 'Si f(x) = (x+1)/(x-2), ¿cuál es el dominio?', math: '', type: 'mc', choices: ['x ≠ 2','x ≠ -1','x ≠ ±2','Todos los reales'], correct: 0, answer: 'x ≠ 2', points: 35, category: 'Dominio racional', explanation: 'La función no está definida cuando el denominador es 0: x-2=0 → x=2. Dominio: todos los reales excepto x=2.' },
+        { text: 'Encuentra (f∘g)(x) si f(x)=√x y g(x)=x²+1', math: '(f∘g)(x) = ?', type: 'mc', choices: ['√(x²+1)','x+1','x²+1','(√x)²+1'], correct: 0, answer: '√(x²+1)', points: 40, category: 'Composición avanzada', explanation: '(f∘g)(x) = f(g(x)) = f(x²+1) = √(x²+1).' },
+        { text: 'La función inversa de f(x) = 2x + 6 es:', math: 'f⁻¹(x) = ?', type: 'mc', choices: ['(x-6)/2','2x-6','(x+6)/2','x/2-6'], correct: 0, answer: '(x-6)/2', points: 40, category: 'Función inversa', explanation: 'Para encontrar la inversa: reemplaza f(x) por y: y=2x+6. Intercambia x e y: x=2y+6. Despeja y: y=(x-6)/2.' },
+        { text: '¿Cuánto es log₂(8)?', math: 'log₂(8) = ?', type: 'mc', choices: ['3','2','4','1'], correct: 0, answer: '3', points: 30, category: 'Logaritmos', explanation: 'log₂(8) = x significa 2ˣ = 8. Como 2³ = 8, entonces log₂(8) = 3.' },
+        { text: 'Simplifica usando propiedades:', math: 'ln(e⁵)', type: 'mc', choices: ['5','e⁵','5e','1/5'], correct: 0, answer: '5', points: 30, category: 'Propiedades ln', explanation: 'Por definición, ln(eˣ) = x. Entonces ln(e⁵) = 5.' },
+      ],
+    },
+    inequaciones: {
+      basica: [
+        { text: 'Resuelve la inequación:', math: '2x + 3 > 7', type: 'mc', choices: ['x > 2','x > 5','x < 2','x ≥ 2'], correct: 0, answer: 'x > 2', points: 20, category: 'Lineal', explanation: '2x > 4 → x > 2. Solución: (2, +∞).' },
+        { text: 'Resuelve:', math: '-3x ≤ 9', type: 'mc', choices: ['x ≤ -3','x ≥ -3','x ≤ 3','x ≥ 3'], correct: 1, answer: 'x ≥ -3', points: 25, category: 'Cambio de signo', explanation: 'Al dividir por -3 (negativo), el signo se invierte: x ≥ -3.' },
+        { text: '¿Cuál es la solución?', math: 'x² - 4 > 0', type: 'mc', choices: ['(-∞,-2) ∪ (2,+∞)','(-2,2)','x > 2','(-∞,-2)'], correct: 0, answer: '(-∞,-2) ∪ (2,+∞)', points: 35, category: 'Cuadrática', explanation: '(x+2)(x-2) > 0. Raíces: x=±2. El producto es positivo fuera de las raíces: x<-2 o x>2.' },
+        { text: 'La solución de 5 - x > 2 es:', math: '', type: 'mc', choices: ['x < 3','x > 3','x < -3','x > -3'], correct: 0, answer: 'x < 3', points: 20, category: 'Lineal', explanation: '-x > -3 → x < 3 (inverti el signo al multiplicar por -1).' },
+        { text: 'Resuelve:', math: 'x² - 5x + 6 ≤ 0', type: 'mc', choices: ['[2, 3]','(-∞,2]∪[3,+∞)','[3,+∞)','(-∞,2]'], correct: 0, answer: '[2, 3]', points: 35, category: 'Cuadrática', explanation: '(x-2)(x-3) ≤ 0. El producto es ≤ 0 entre las raíces: 2 ≤ x ≤ 3.' },
+      ],
+      avanzada: [
+        { text: 'Solución de la inequación:', math: 'x² + x - 12 > 0', type: 'mc', choices: ['(-∞,-4)∪(3,+∞)','(-4,3)','(-∞,3)','(-4,+∞)'], correct: 0, answer: '(-∞,-4)∪(3,+∞)', points: 40, category: 'Cuadrática avanzada', explanation: '(x+4)(x-3) > 0. Raíces: x=-4 y x=3. Positivo afuera: x<-4 o x>3.' },
+        { text: 'Resuelve:', math: '(x-1)/(x+2) > 0', type: 'mc', choices: ['(-∞,-2)∪(1,+∞)','(-2,1)','(-2,+∞)','(-∞,1)'], correct: 0, answer: '(-∞,-2)∪(1,+∞)', points: 45, category: 'Fracción', explanation: 'El cociente es positivo cuando ambos tienen el mismo signo. Tabla de signos para x<-2, -2<x<1, x>1 da positivo en (-∞,-2) y (1,+∞).' },
+        { text: 'Resuelve la inequación cúbica:', math: 'x³ - x > 0', type: 'mc', choices: ['(-1,0)∪(1,+∞)','(0,+∞)','(-∞,-1)∪(1,+∞)','(-1,1)'], correct: 0, answer: '(-1,0)∪(1,+∞)', points: 50, category: 'Cúbica', explanation: 'Factorizando: x(x²-1)=x(x+1)(x-1)>0. Tabla de signos: positivo en (-1,0) y (1,+∞).' },
+        { text: '¿En qué intervalo es f(x) = x² - 6x + 8 negativa?', math: '', type: 'mc', choices: ['(2, 4)','(-2, 4)','(0, 4)','(-∞,2)∪(4,+∞)'], correct: 0, answer: '(2, 4)', points: 40, category: 'Signo de cuadrática', explanation: 'Raíces: x=2 y x=4. Como a=1>0, la parábola va hacia arriba: es negativa entre las raíces, es decir (2,4).' },
+        { text: 'Resuelve:', math: '2/(x-1) ≤ 1', type: 'mc', choices: ['(1,3]','[3,+∞)','(-∞,1)∪[3,+∞)','(1,+∞)'], correct: 2, answer: '(-∞,1)∪[3,+∞)', points: 50, category: 'Fracción compleja', explanation: '2/(x-1)-1 ≤ 0 → (2-(x-1))/(x-1) ≤ 0 → (3-x)/(x-1) ≤ 0. Análisis de signos: negativo en (-∞,1) y [3,+∞).' },
+      ],
+    },
+    valor_absoluto: {
+      basica: [
+        { text: 'Resuelve la ecuación:', math: '|x - 3| = 5', type: 'mc', choices: ['x = 8 o x = -2','x = 8','x = -2','x = 2 o x = -8'], correct: 0, answer: 'x=8 o x=-2', points: 25, category: 'Ecuación |x|=k', explanation: 'Dos casos: x-3=5 → x=8; y x-3=-5 → x=-2.' },
+        { text: 'Resuelve la inecuación:', math: '|x| < 4', type: 'mc', choices: ['-4 < x < 4','x < 4','x > -4','x > 4 o x < -4'], correct: 0, answer: '-4 < x < 4', points: 25, category: 'Inecuación < k', explanation: '|x| < 4 equivale a -4 < x < 4. Regla: menor que → intersección.' },
+        { text: 'Resuelve:', math: '|x + 1| > 2', type: 'mc', choices: ['x > 1 o x < -3','x > 1','x < -3','-3 < x < 1'], correct: 0, answer: 'x>1 o x<-3', points: 30, category: 'Inecuación > k', explanation: 'Caso 1: x+1>2 → x>1. Caso 2: x+1<-2 → x<-3. Unión: x>1 o x<-3.' },
+        { text: '¿Cuánto vale |(-7)|?', math: '', type: 'mc', choices: ['7','-7','49','0'], correct: 0, answer: '7', points: 15, category: 'Definición', explanation: 'El valor absoluto de cualquier número es siempre positivo. |(-7)| = 7.' },
+        { text: 'Resuelve:', math: '|2x - 4| = 0', type: 'mc', choices: ['x = 2','x = 0 o x = 4','x = -2','Sin solución'], correct: 0, answer: 'x=2', points: 25, category: 'Caso especial = 0', explanation: '|expr| = 0 solo cuando expr = 0. Entonces 2x-4 = 0 → x = 2.' },
+      ],
+      avanzada: [
+        { text: 'Solución de la inecuación:', math: '|2x - 1| ≤ 5', type: 'mc', choices: ['[-2, 3]','(-2, 3)','[-3, 2]','(-∞,-2]∪[3,+∞)'], correct: 0, answer: '[-2, 3]', points: 40, category: 'Lineal con |·|', explanation: '-5 ≤ 2x-1 ≤ 5 → -4 ≤ 2x ≤ 6 → -2 ≤ x ≤ 3.' },
+        { text: 'Resuelve:', math: '|x² - 4| < 5', type: 'mc', choices: ['(-3, 3)','(-3, -√5)∪(√5, 3)','(-√5, √5)','x > -3'], correct: 0, answer: '(-3, 3)', points: 50, category: 'Cuadrática con |·|', explanation: '-5 < x²-4 < 5. De la izquierda: x²>-1 (siempre). De la derecha: x²<9 → -3<x<3. Solución: (-3,3).' },
+        { text: 'Resuelve la ecuación:', math: '|x - 2| = |x + 5|', type: 'mc', choices: ['x = -1.5','x = 3','x = -3.5','x = 7'], correct: 0, answer: 'x=-1.5', points: 45, category: '|a|=|b|', explanation: 'Dos casos: x-2=x+5 (sin solución) o x-2=-(x+5) → 2x=-3 → x=-3/2=-1.5.' },
+        { text: 'Resuelve:', math: '|x + 3| ≥ 1', type: 'mc', choices: ['(-∞,-4]∪[-2,+∞)','[-4,-2]','(-∞,-2)','(-4,-2)'], correct: 0, answer: '(-∞,-4]∪[-2,+∞)', points: 40, category: 'Inecuación ≥', explanation: 'x+3 ≥ 1 → x ≥ -2, O x+3 ≤ -1 → x ≤ -4. Unión: (-∞,-4] ∪ [-2,+∞).' },
+        { text: 'Número de soluciones de |x²| = -1:', math: '', type: 'mc', choices: ['0','1','2','Infinitas'], correct: 0, answer: '0', points: 30, category: 'Sin solución', explanation: 'El valor absoluto siempre es ≥ 0. Nunca puede ser igual a -1. No hay soluciones.' },
+      ],
+    },
+    limites: {
+      basica: [
+        { text: 'Calcula el límite por sustitución directa:', math: 'lim[x→2] (x² + 3x)', type: 'mc', choices: ['10','4','14','8'], correct: 0, answer: '10', points: 20, category: 'Límite directo', explanation: 'Sustituimos x=2: (2)²+3(2)=4+6=10.' },
+        { text: 'Calcula:', math: 'lim[x→0] (3x + 5)', type: 'mc', choices: ['5','3','8','0'], correct: 0, answer: '5', points: 20, category: 'Límite directo', explanation: 'Sustituimos x=0: 3(0)+5=5.' },
+        { text: '¿Qué tipo de indeterminación produce este límite?', math: 'lim[x→1] (x-1)/(x²-1)', type: 'mc', choices: ['0/0','∞/∞','0·∞','Ninguna'], correct: 0, answer: '0/0', points: 25, category: 'Indeterminación', explanation: 'Sustituimos x=1: (1-1)/(1-1)=0/0. Se debe factorizar.' },
+        { text: 'Calcula:', math: 'lim[x→3] (x²-9)/(x-3)', type: 'mc', choices: ['6','0','∞','3'], correct: 0, answer: '6', points: 30, category: 'Factorización', explanation: '(x-3)(x+3)/(x-3) = x+3. Al evaluar x→3: 3+3=6.' },
+        { text: 'El límite lateral existe cuando:', math: '', type: 'mc', choices: ['Los límites laterales son iguales','x se aproxima a cero','La función está definida en x=a','El denominador no es cero'], correct: 0, answer: 'Los límites laterales son iguales', points: 20, category: 'Concepto', explanation: 'El límite lim[x→a]f(x) existe si y solo si lim[x→a⁺]f(x) = lim[x→a⁻]f(x).' },
+      ],
+      avanzada: [
+        { text: 'Calcula:', math: 'lim[x→∞] (3x² + 2x)/(x² - 1)', type: 'mc', choices: ['3','2','-1','0'], correct: 0, answer: '3', points: 40, category: 'Límite al infinito', explanation: 'Dividimos por x² (potencia mayor del denominador): (3+2/x)/(1-1/x²). Al x→∞ los términos con x→0, queda 3/1=3.' },
+        { text: 'Calcula:', math: 'lim[x→0] (√(x+4)-2)/x', type: 'mc', choices: ['1/4','1/2','0','∞'], correct: 0, answer: '1/4', points: 45, category: 'Racionalización', explanation: 'Multiplica por (√(x+4)+2)/(√(x+4)+2). Numerador queda x. Denominador: x(√(x+4)+2). Cancela x: 1/(√(x+4)+2). Con x→0: 1/(2+2)=1/4.' },
+        { text: 'Calcula:', math: 'lim[x→2] (x³-8)/(x-2)', type: 'mc', choices: ['12','0','8','6'], correct: 0, answer: '12', points: 40, category: 'Diferencia de cubos', explanation: 'x³-8=(x-2)(x²+2x+4). Cancelando (x-2): x²+2x+4. Con x=2: 4+4+4=12.' },
+        { text: 'Calcula:', math: 'lim[x→0] sen(3x)/x', type: 'mc', choices: ['3','1','0','∞'], correct: 0, answer: '3', points: 45, category: 'Límite notable', explanation: 'Reescribir: 3·[sen(3x)/(3x)]. Cuando x→0, también 3x→0, y sen(u)/u→1. Resultado: 3·1=3.' },
+        { text: 'Para la función f(x)={x+1 si x<2; 5 si x=2; x+1 si x>2}, el lim[x→2] es:', math: '', type: 'mc', choices: ['3','5','No existe','2'], correct: 0, answer: '3', points: 40, category: 'Función por partes', explanation: 'El límite depende de los laterales, no del valor en x=2. lim[x→2⁻]=3 y lim[x→2⁺]=3. Como son iguales, el límite es 3.' },
+      ],
+    },
+    derivadas: {
+      basica: [
+        { text: 'Aplica la regla de la potencia:', math: 'd/dx [x⁵]', type: 'mc', choices: ['5x⁴','5x⁵','x⁴','4x⁵'], correct: 0, answer: '5x⁴', points: 20, category: 'Regla de potencia', explanation: 'Regla xⁿ → nxⁿ⁻¹. Aquí n=5: 5x^(5-1) = 5x⁴.' },
+        { text: 'Deriva:', math: 'f(x) = 3x² + 2x - 7', type: 'mc', choices: ['6x + 2','3x + 2','6x - 7','6x + 2x'], correct: 0, answer: '6x+2', points: 25, category: 'Polinomio', explanation: 'Derivada término a término: d/dx[3x²]=6x, d/dx[2x]=2, d/dx[-7]=0. Total: 6x+2.' },
+        { text: 'Deriva usando regla del producto:', math: 'f(x) = x · eˣ', type: 'mc', choices: ['eˣ + xeˣ','xeˣ','eˣ','xeˣ - eˣ'], correct: 0, answer: 'eˣ+xeˣ', points: 35, category: 'Regla del producto', explanation: 'f=x (f\'=1), g=eˣ (g\'=eˣ). f\'g + fg\' = 1·eˣ + x·eˣ = eˣ(1+x).' },
+        { text: 'Deriva:', math: 'd/dx [sin(x)]', type: 'mc', choices: ['cos(x)','-cos(x)','-sin(x)','tan(x)'], correct: 0, answer: 'cos(x)', points: 20, category: 'Trigonométrica', explanation: 'La derivada del seno es el coseno: d/dx[sin(x)] = cos(x).' },
+        { text: 'Deriva:', math: 'd/dx [ln(x)]', type: 'mc', choices: ['1/x','ln(x)','x','eˣ'], correct: 0, answer: '1/x', points: 20, category: 'Logarítmica', explanation: 'Fórmula fundamental: d/dx[ln(x)] = 1/x.' },
+      ],
+      avanzada: [
+        { text: 'Aplica la regla del cociente:', math: 'd/dx [(x²+1)/(x-1)]', type: 'mc', choices: ['(x²-2x-1)/(x-1)²','(x²+1)/(x-1)²','2x/(x-1)','(2x(x-1)-(x²+1))/(x-1)²'], correct: 3, answer: '(2x(x-1)-(x²+1))/(x-1)²', points: 45, category: 'Regla del cociente', explanation: 'f=x²+1, g=x-1. (f\'g-fg\')/g² = (2x(x-1)-1(x²+1))/(x-1)²= (2x²-2x-x²-1)/(x-1)² = (x²-2x-1)/(x-1)².' },
+        { text: 'Aplica regla de la cadena:', math: 'd/dx [sin(x³)]', type: 'mc', choices: ['3x²cos(x³)','cos(x³)','3x²sin(x³)','-3x²cos(x³)'], correct: 0, answer: '3x²cos(x³)', points: 45, category: 'Regla de la cadena', explanation: 'Exterior: sin(u) → cos(u). Interior: x³ → 3x². Por la cadena: cos(x³)·3x².' },
+        { text: 'Deriva:', math: 'd/dx [e^(2x+1)]', type: 'mc', choices: ['2e^(2x+1)','e^(2x+1)','(2x+1)e^(2x)','e^2'], correct: 0, answer: '2e^(2x+1)', points: 40, category: 'Exponencial con cadena', explanation: 'd/dx[e^u]=e^u·u\'. Aquí u=2x+1, u\'=2. Resultado: 2e^(2x+1).' },
+        { text: 'Deriva usando regla de la cadena:', math: 'd/dx [ln(x² + 1)]', type: 'mc', choices: ['2x/(x²+1)','1/(x²+1)','2x·ln(x²+1)','1/x'], correct: 0, answer: '2x/(x²+1)', points: 45, category: 'Logarítmica con cadena', explanation: 'd/dx[ln(u)] = u\'/u. Aquí u=x²+1, u\'=2x. Resultado: 2x/(x²+1).' },
+        { text: 'Deriva:', math: 'd/dx [x² · cos(x)]', type: 'mc', choices: ['2x·cos(x) - x²·sin(x)','2x·cos(x) + x²·sin(x)','-x²·sin(x)','2x·cos(x)'], correct: 0, answer: '2x·cos(x) - x²·sin(x)', points: 45, category: 'Producto con trig', explanation: 'f=x² (f\'=2x), g=cos(x) (g\'=-sin(x)). f\'g+fg\' = 2x·cos(x) + x²·(-sin(x)) = 2x·cos(x)-x²·sin(x).' },
+      ],
+    },
+  };
+  return (all[topicId]?.[level] || []).map(q => ({ ...q, level, id: Math.random() }));
+}
+
+// ========== INIT ==========
+function renderMap() {
+  const grid = document.getElementById('map-grid'); grid.innerHTML = '';
+  TOPICS.forEach(t => {
+    const locked = t.prereq.some(p => !state.completedTopics.has(p));
+    const done = state.completedTopics.has(t.id);
+    const prog = state.topicProgress[t.id] || 0;
+    const card = document.createElement('div');
+    card.className = `topic-card ${locked ? 'locked' : 'unlocked'} ${done ? 'completed' : ''}`;
+    card.dataset.color = t.color;
+    card.innerHTML = `
+      <span class="topic-icon">${t.icon}</span>
+      <div class="topic-name">${t.name} ${done ? '✅' : ''}</div>
+      <div class="topic-desc">${t.desc}</div>
+      <div class="topic-progress"><div class="topic-progress-bar" style="width:${prog}%"></div></div>
+      <div class="topic-meta">
+        <span class="topic-stages">${t.stages.length} etapas · ${locked ? '🔒 Bloqueado' : done ? 'Completado' : 'Disponible'}</span>
+      </div>`;
+    if (!locked) card.onclick = () => startLesson(t.id);
+    grid.appendChild(card);
+  });
+}
+
+// init speech voices
+window.addEventListener('load', () => {
+  window.speechSynthesis && window.speechSynthesis.getVoices();
+});
+</script>
+</body>
+</html>
